@@ -18,10 +18,21 @@ GNU General Public License for more details.
 #include "pencildef.h"
 #include "editor.h"
 #include "mainwindow2.h"
+
+#include "fileutils.h"
 #include "logging.h"
 
 void initialise();
 
+void initLogging()
+{
+    QString systemLoggingIniFilename = FileUtils::GetSettingsFilename("Logging.ini");
+    QFile systemLoggingIni(systemLoggingIniFilename);
+    Logging::LoadLoggingConfig(systemLoggingIni);
+    QString loggingIniFilename = FileUtils::GetUserSettingsFilename("Logging.ini");
+    QFile userLoggingIni(loggingIniFilename);
+    Logging::LoadLoggingConfig(userLoggingIni);
+}
 
 int main(int argc, char* argv[])
 {   
