@@ -18,17 +18,26 @@ GNU General Public License for more details.
 #include "pencildef.h"
 #include "editor.h"
 #include "mainwindow2.h"
+#include "logging.h"
 
 void initialise();
 
 
 int main(int argc, char* argv[])
 {   
+    QCoreApplication::setOrganizationName("Pencil2d");
+    QCoreApplication::setOrganizationDomain("org.pencil2d.www");
+    QCoreApplication::setApplicationName("Pencil");
+
     QApplication app(argc, argv);
+
     app.setApplicationName("Pencil");
+
 #ifndef Q_WS_MAC
     app.setWindowIcon(QIcon(":/icons/icon.png"));
 #endif
+
+    initLogging();
 
     initialise();
 

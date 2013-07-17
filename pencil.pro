@@ -70,7 +70,9 @@ HEADERS +=  src/interfaces.h \
     src/graphics/vector/vectorselection.h \
     src/util/pencildef.h \
     src/interface/keycapturelineedit.h \
-    src/structure/objectsaveloader.h
+    src/structure/objectsaveloader.h \
+    src/util/fileutils.h \
+    src/util/logging.h
 
 SOURCES +=  src/graphics/bitmap/blur.cpp \
             src/graphics/bitmap/bitmapimage.cpp \
@@ -119,7 +121,19 @@ SOURCES +=  src/graphics/bitmap/blur.cpp \
     src/interface/timelinecells.cpp \
     src/graphics/vector/vectorselection.cpp \
     src/interface/keycapturelineedit.cpp \
-    src/structure/objectsaveloader.cpp
+    src/structure/objectsaveloader.cpp \
+    src/util/fileutils.cpp \
+    src/util/logging.cpp
+
+HEADERS += vendor/SimpleIni/SimpleIni.h \
+    vendor/ConvertUTF/ConvertUTF.h
+
+SOURCES +=  \
+    vendor/ConvertUTF/ConvertUTF.c
+
+INCLUDEPATH += vendor/ConvertUTF
+
+include(vendor/QsLog/QsLog.pri)
 
 win32 {
     INCLUDEPATH += . libwin32
