@@ -95,7 +95,6 @@ ScribbleArea::ScribbleArea(QWidget *parent, Editor *editor)
 
     tabletEraserBackupToolMode = NONE;
     setAttribute(Qt::WA_StaticContents); // ?
-    modified = false;
     simplified = false;
     m_usePressure = true;
     m_makeInvisible = false;
@@ -129,8 +128,6 @@ ScribbleArea::ScribbleArea(QWidget *parent, Editor *editor)
     setMouseTracking(true); // reacts to mouse move events, even if the button is not pressed
 
     keyboardInUse = false;
-
-    debugRect = QRectF(0, 0, 0, 0);
 
     setSizePolicy(QSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding));
     QPixmapCache::setCacheLimit(30 * 2 * 1024);
@@ -1998,8 +1995,7 @@ void ScribbleArea::floodFill(VectorImage *vectorImage, QPoint point, QRgb target
     QPointF mBoxTopRight = myTempView.inverted(&invertible).map(QPointF(qMax(boxLeft, boxRight) + 1 * tol, qMax(boxTop, boxBottom) + 1 * tol));
     QPointF mBoxBottomLeft = myTempView.inverted(&invertible).map(QPointF(qMin(boxLeft, boxRight) - 1 * tol, qMin(boxTop, boxBottom) - 1 * tol));
     QRectF boundingBox = QRectF(mBoxBottomLeft.x() - 1, mBoxBottomLeft.y() - 1, qAbs(mBoxBottomLeft.x() - mBoxTopRight.x()) + 2, qAbs(mBoxBottomLeft.y() - mBoxTopRight.y()) + 2);
-    debugRect = QRectF(0, 0, 0, 0);
-    debugRect = boundingBox;
+
     for (int l = 0; l < points.size(); l++)
     {
         QPointF mPoint = vectorImage->getVertex(points.at(l));
@@ -2010,6 +2006,7 @@ void ScribbleArea::floodFill(VectorImage *vectorImage, QPoint point, QRgb target
             boxPoints.append(points.at(l));
         }
     }
+
     // ---- finds the points near the contourPixels -> contourPoints
     for (int i = 0; i < contourPixels.size(); i++)
     {

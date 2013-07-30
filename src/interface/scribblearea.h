@@ -61,7 +61,6 @@ public:
     bool readCanvasFromCache;
     QRectF mySelection, myTransformedSelection, myTempTransformedSelection;
 
-    bool isModified() const { return modified; }
     bool areLayersSane() const;
     bool isLayerPaintable() const;
 
@@ -230,7 +229,6 @@ protected:
     Editor *m_pEditor;
 
     ToolType tabletEraserBackupToolMode;
-    bool modified;
     bool simplified;
 
     bool m_showThinLines;
@@ -239,7 +237,6 @@ protected:
     bool m_makeInvisible;
     bool m_antialiasing;
     bool shadows;
-    bool toolCursors;
     int  gradients;
     qreal curveOpacity;
     qreal curveSmoothing;
@@ -274,9 +271,6 @@ protected:
     QMatrix myView, myTempView, centralView, transMatrix;
 
     QPixmap canvas;
-
-    // debug
-    QRectF debugRect;
 };
 
 #endif
