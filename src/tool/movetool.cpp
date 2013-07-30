@@ -130,8 +130,6 @@ void MoveTool::mouseReleaseEvent(QMouseEvent *event)
     {
         if (layer->type == Layer::BITMAP || layer->type == Layer::VECTOR)
         {
-            m_pScribbleArea->offset.setX(0);
-            m_pScribbleArea->offset.setY(0);
             m_pScribbleArea->calculateSelectionTransformation();
 
             m_pScribbleArea->myTransformedSelection = m_pScribbleArea->myTempTransformedSelection;
@@ -147,6 +145,8 @@ void MoveTool::mouseMoveEvent(QMouseEvent *event)
     Layer *layer = m_pEditor->getCurrentLayer();
     if (layer == NULL) { return; }
 
+    QPointF offset = getCurrentPixel() - getLastPressPixel();
+
     if (layer->type == Layer::BITMAP || layer->type == Layer::VECTOR)
     {
         if (event->buttons() & Qt::LeftButton)   // the user is also pressing the mouse (dragging)
@@ -160,31 +160,31 @@ void MoveTool::mouseMoveEvent(QMouseEvent *event)
                     case ScribbleArea::MIDDLE:
                         if (QLineF(getLastPressPixel(), getCurrentPixel()).length() > 4)
                         {
-                            m_pScribbleArea->myTempTransformedSelection = m_pScribbleArea->myTransformedSelection.translated(m_pScribbleArea->offset);
+                            m_pScribbleArea->myTempTransformedSelection = m_pScribbleArea->myTransformedSelection.translated(offset);
                         }
                         break;
 
                     case ScribbleArea::TOPRIGHT:
                         m_pScribbleArea->myTempTransformedSelection =
-                                m_pScribbleArea->myTransformedSelection.adjusted(0, m_pScribbleArea->offset.y(), m_pScribbleArea->offset.x(), 0);
+                                m_pScribbleArea->myTransformedSelection.adjusted(0, offset.y(), offset.x(), 0);
                         break;
 
 
                     case ScribbleArea::TOPLEFT:
                         m_pScribbleArea->myTempTransformedSelection =
-                                m_pScribbleArea->myTransformedSelection.adjusted(m_pScribbleArea->offset.x(), m_pScribbleArea->offset.y(), 0, 0);
+                                m_pScribbleArea->myTransformedSelection.adjusted(offset.x(), offset.y(), 0, 0);
                         break;
 
                         // TOPRIGHT XXX
 
                     case ScribbleArea::BOTTOMLEFT:
                         m_pScribbleArea->myTempTransformedSelection =
-                                m_pScribbleArea->myTransformedSelection.adjusted(m_pScribbleArea->offset.x(), 0, 0, m_pScribbleArea->offset.y());
+                                m_pScribbleArea->myTransformedSelection.adjusted(offset.x(), 0, 0, offset.y());
                         break;
 
                     case ScribbleArea::BOTTOMRIGHT:
                         m_pScribbleArea->myTempTransformedSelection =
-                                m_pScribbleArea->myTransformedSelection.adjusted(0, 0, m_pScribbleArea->offset.x(), m_pScribbleArea->offset.y());
+                                m_pScribbleArea->myTransformedSelection.adjusted(0, 0, offset.x(), offset.y());
                         break;
                     }
 

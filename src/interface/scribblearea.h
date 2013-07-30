@@ -260,9 +260,7 @@ protected:
     qreal tol;
     QList<int> closestCurves;
     QList<VertexRef> closestVertices;
-    QPointF offset;
 
-    //WYWIWYG tool adjustments
     bool adjustingTool; //whether or not resizing
 
     //instant tool (temporal eg. eraser)

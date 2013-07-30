@@ -120,8 +120,6 @@ ScribbleArea::ScribbleArea(QWidget *parent, Editor *editor)
     mySelection =  newSelection;
     myTransformedSelection = newSelection;
     myTempTransformedSelection = newSelection;
-    offset.setX(0);
-    offset.setY(0);
     selectionTransformation.reset();
 
     tol = 7.0;
@@ -1832,8 +1830,6 @@ void ScribbleArea::displaySelectionProperties()
 
 void ScribbleArea::selectAll()
 {
-    offset.setX(0);
-    offset.setY(0);
     Layer *layer = m_pEditor->getCurrentLayer();
     if (layer == NULL) { return; }
     if (layer->type == Layer::BITMAP)
@@ -1851,8 +1847,6 @@ void ScribbleArea::selectAll()
 
 void ScribbleArea::deselectAll()
 {
-    offset.setX(0);
-    offset.setY(0);
     selectionTransformation.reset();
     mySelection.setRect(10, 10, 20, 20);
     myTransformedSelection.setRect(10, 10, 20, 20);

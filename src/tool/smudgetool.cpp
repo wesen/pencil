@@ -98,6 +98,8 @@ void SmudgeTool::mouseMoveEvent(QMouseEvent *event)
     Layer *layer = m_pEditor->getCurrentLayer();
     if (layer == NULL) { return; }
 
+    QPointF offset = getCurrentPixel() - getLastPressPixel();
+
     if (layer->type == Layer::BITMAP || layer->type == Layer::VECTOR)
     {
         if (event->buttons() & Qt::LeftButton)   // the user is also pressing the mouse (dragging) {
@@ -107,7 +109,7 @@ void SmudgeTool::mouseMoveEvent(QMouseEvent *event)
                 if (event->modifiers() != Qt::ShiftModifier)    // (and the user doesn't press shift)
                 {
                     // transforms the selection
-                    m_pScribbleArea->selectionTransformation = QMatrix().translate(m_pScribbleArea->offset.x(), m_pScribbleArea->offset.y());
+                    m_pScribbleArea->selectionTransformation = QMatrix().translate(offset.x(), offset.y());
                     ((LayerVector *)layer)->getLastVectorImageAtFrame(m_pEditor->m_nCurrentFrameIndex, 0)->setSelectionTransformation(m_pScribbleArea->selectionTransformation);
                 }
             }
