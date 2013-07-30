@@ -8,7 +8,7 @@ class MoveTool : public BaseTool
 {
     Q_OBJECT
 public:
-    MoveTool();
+    MoveTool(QObject *parent = NULL);
     ToolType type();
     void loadSettings();
     QCursor cursor();

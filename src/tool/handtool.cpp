@@ -7,7 +7,7 @@
 #include "scribblearea.h"
 #include "layercamera.h"
 
-HandTool::HandTool()
+HandTool::HandTool(QObject *parent) : BaseTool(parent)
 {
 
 }
@@ -41,7 +41,7 @@ void HandTool::mouseReleaseEvent(QMouseEvent *event)
     if (event->button() == Qt::MidButton)
     {
         //qDebug("Stop Hand Tool");
-        m_pScribbleArea->setPrevTool();
+        m_pScribbleArea->setPreviousTool();
     }
 }
 

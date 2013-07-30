@@ -36,6 +36,7 @@ GNU General Public License for more details.
 #include "polylinetool.h"
 #include "selecttool.h"
 #include "smudgetool.h"
+#include "adjusttool.h"
 
 #include "scribblearea.h"
 
@@ -52,17 +53,19 @@ ScribbleArea::ScribbleArea(QWidget *parent, Editor *editor)
 
     m_currentTool = NULL;
 
-    m_toolSetHash.insert(PEN, new PenTool);
-    m_toolSetHash.insert(PENCIL, new PencilTool);
-    m_toolSetHash.insert(BRUSH, new BrushTool);
-    m_toolSetHash.insert(ERASER, new EraserTool);
-    m_toolSetHash.insert(BUCKET, new BucketTool);    
-    m_toolSetHash.insert(EYEDROPPER, new EyedropperTool);
-    m_toolSetHash.insert(HAND, new HandTool);
-    m_toolSetHash.insert(MOVE, new MoveTool);
-    m_toolSetHash.insert(POLYLINE, new PolylineTool);
-    m_toolSetHash.insert(SELECT, new SelectTool);
-    m_toolSetHash.insert(SMUDGE, new SmudgeTool);
+    m_toolSetHash.insert(PEN, new PenTool(this));
+    m_toolSetHash.insert(PENCIL, new PencilTool(this));
+    m_toolSetHash.insert(BRUSH, new BrushTool(this));
+    m_toolSetHash.insert(ERASER, new EraserTool(this));
+    m_toolSetHash.insert(BUCKET, new BucketTool(this));
+    m_toolSetHash.insert(EYEDROPPER, new EyedropperTool(this));
+    m_toolSetHash.insert(HAND, new HandTool(this));
+    m_toolSetHash.insert(MOVE, new MoveTool(this));
+    m_toolSetHash.insert(POLYLINE, new PolylineTool(this));
+    m_toolSetHash.insert(SELECT, new SelectTool(this));
+    m_toolSetHash.insert(SMUDGE, new SmudgeTool(this));
+    m_adjustTool = new AdjustTool(this);
+    m_toolSetHash.insert(ADJUST, m_adjustTool);
 
     foreach (BaseTool *tool, getTools())
     {
@@ -90,7 +93,7 @@ ScribbleArea::ScribbleArea(QWidget *parent, Editor *editor)
     gradients = 2;
     if (settings.value("gradients").toString() != "") { gradients = settings.value("gradients").toInt(); };
 
-    tabletEraserBackupToolMode = -1;
+    tabletEraserBackupToolMode = NONE;
     setAttribute(Qt::WA_StaticContents); // ?
     modified = false;
     simplified = false;
@@ -712,29 +715,19 @@ void ScribbleArea::tabletEvent(QTabletEvent *event)
 
     if (event->pointerType() == QTabletEvent::Eraser)
     {
-        if (tabletEraserBackupToolMode == -1)
+        if (tabletEraserBackupToolMode == NONE)
         {
             tabletEraserBackupToolMode = currentTool()->type();
             // memorise which tool was being used before switching to the eraser
-            emit eraserOn();
+            switchTool(ERASER);
         }
     }
     else
     {
-        if (tabletEraserBackupToolMode != -1)   // restore the tool in use
+        if (tabletEraserBackupToolMode != NONE)   // restore the tool in use
         {
-            switch (tabletEraserBackupToolMode)
-            {
-            case PENCIL:
-                emit pencilOn();
-                break;
-            case PEN:
-                emit penOn();
-                break;
-            default:
-                emit pencilOn();
-            }
-            tabletEraserBackupToolMode = -1;
+            switchTool(tabletEraserBackupToolMode);
+            tabletEraserBackupToolMode = NONE;
         }
     }
     event->ignore(); // indicates that the tablet event is not accepted yet, so that it is propagated as a mouse event)
@@ -750,68 +743,12 @@ void ScribbleArea::mousePressEvent(QMouseEvent *event)
 {
     mouseInUse = true;
 
-    m_strokeManager->mousePressEvent(event);
-
-
-    if (!m_strokeManager->isTabletInUse())   // a mouse is used instead of a tablet
+    if (!areLayersSane())
     {
-        m_strokeManager->setPressure(1.0);
-        currentTool()->adjustPressureSensitiveProperties(1.0, true);
-
-        //----------------code for starting hand tool when middle mouse is pressed
-        if (event->buttons() & Qt::MidButton)
-        {
-            //qDebug() << "Hand Start " << event->pos();
-            prevMode = currentTool()->type();
-            emit handOn();
-        }
-    }
-
-    if (!(event->button() == Qt::NoButton))    // if the user is pressing the left or right button
-    {
-        lastPixel = m_strokeManager->getLastPressPixel();
-        bool invertible = true;
-        lastPoint = myTempView.inverted(&invertible).map(QPointF(lastPixel));
-    }
-
-    // ----- wysiwyg tool adjusment
-    if ( (event->modifiers() == Qt::ShiftModifier) && (currentTool()->properties.width > -1) )
-    {
-        //adjust width if not locked
-        qDebug() << "adjusting tool width from " << currentTool()->properties.width;
-        adjustingTool = true;
-        wysiToolAdjustment = wtaWIDTH;
-        toolOrgValue = currentTool()->properties.width;
         return;
     }
-    else if ( (event->modifiers() == Qt::ControlModifier) && (currentTool()->properties.feather>-1) )
-    {
-        //adjust feather if not locked
-        qDebug() << "adjusting tool feather from " << currentTool()->properties.feather;
-        adjustingTool = true;
-        wysiToolAdjustment = wtaFEATHER;
-        toolOrgValue = currentTool()->properties.feather;
-        return;
-    }
-    else
-    {
-        adjustingTool = false;
-    }
 
-    // ---- checks ------
     Layer *layer = m_pEditor->getCurrentLayer();
-    if (layer == NULL) { return; }
-
-    if (layer->type == Layer::VECTOR)
-    {
-        VectorImage *vectorImage = ((LayerVector *)layer)->getLastVectorImageAtFrame(m_pEditor->m_nCurrentFrameIndex, 0);
-        if (vectorImage == NULL) { return; }
-    }
-    if (layer->type == Layer::BITMAP)
-    {
-        BitmapImage *bitmapImage = ((LayerBitmap *)layer)->getLastBitmapImageAtFrame(m_pEditor->m_nCurrentFrameIndex, 0);
-        if (bitmapImage == NULL) { return; }
-    }
 
     if (!layer->visible && currentTool()->type() != HAND && (event->button() != Qt::RightButton))
     {
@@ -822,62 +759,128 @@ void ScribbleArea::mousePressEvent(QMouseEvent *event)
         mouseInUse = false;
         return;
     }
-    
-    // --- end checks ----
-    
 
-    bool invertible = true;
-    currentPoint = myTempView.inverted(&invertible).map(QPointF(currentPixel));
+    m_strokeManager->mousePressEvent(event);
 
-    // the user is also pressing the mouse (dragging)
-    if (event->buttons() & Qt::LeftButton || event->buttons() & Qt::RightButton)
+    if (!m_strokeManager->isTabletInUse())   // a mouse is used instead of a tablet
     {
-        offset = currentPoint - lastPoint;
-        // --- use SHIFT + drag to resize WIDTH / use CTRL + drag to resize FEATHER ---
-        if (adjustingTool)
+        m_strokeManager->setPressure(1.0);
+        currentTool()->adjustPressureSensitiveProperties(1.0, true);
+
+        //----------------code for starting hand tool when middle mouse is pressed
+        if (event->buttons() & Qt::MidButton)
         {
-            qreal incx = pow(toolOrgValue*100,0.5);
-            qreal newValue = incx + offset.x();
-            
-            if (newValue<0) 
-            {
-                newValue=0;
-            }
-            newValue = pow(newValue,2)/100;
-
-            if (newValue<0.2)
-            {  
-                newValue = 0.2; 
-            }
-            else if (newValue>200)
-            { 
-                newValue = 200; 
-            }
-
-            if ( wysiToolAdjustment==wtaWIDTH )
-            {   
-                m_pEditor->applyWidth( newValue ); 
-            }
-            else if ( wysiToolAdjustment==wtaFEATHER )
-            {   
-                m_pEditor->applyFeather( newValue ); 
-            }
-            else if ( wysiToolAdjustment==wtaTRANSPARENCY )
-            {
-                //todo
-            } 
-            return;
+            prevToolType = currentTool()->type();
+            switchTool(HAND);
+            emit handOn();
         }
-        // ------        
     }
 
-    if (event->button() == Qt::RightButton)
+    // ----- tool adjusment
+    if ( (event->modifiers() == Qt::ShiftModifier) && (currentTool()->properties.width > -1) )
+    {
+        adjustingTool = true;
+        m_adjustTool->setToolAdjustmentMode(AdjustTool::ADJUST_WIDTH, currentTool()->properties.width);
+    }
+    else if ( (event->modifiers() == Qt::ControlModifier) && (currentTool()->properties.feather>-1) )
+    {
+        adjustingTool = true;
+        m_adjustTool->setToolAdjustmentMode(AdjustTool::ADJUST_FEATHER, currentTool()->properties.feather);
+    }
+    else
+    {
+        adjustingTool = false;
+    }
+
+    // the user is also pressing the mouse (dragging)
+    if (adjustingTool)
+    {
+        if ((event->buttons() & Qt::LeftButton) || (event->buttons() & Qt::RightButton))
+        {
+            m_adjustTool->mousePressEvent(event);
+        }
+    }
+    else if (event->button() == Qt::RightButton)
     {
         getTool(HAND)->mousePressEvent(event);
+    }
+    else
+    {
+        currentTool()->mousePressEvent(event);
+    }
+}
+
+
+void ScribbleArea::mouseMoveEvent(QMouseEvent *event)
+{
+    if (!areLayersSane() || !mouseInUse)
+    {
         return;
     }
 
-    currentTool()->mousePressEvent(event);
+    m_strokeManager->mouseMoveEvent(event);
+
+    // the user is also pressing the mouse (dragging)
+    if (adjustingTool)
+    {
+        if (event->buttons() & Qt::LeftButton || event->buttons() & Qt::RightButton)
+        {
+            getTool(ADJUST)->mouseMoveEvent(event);
+        }
+
+    }
+    else if (event->buttons() == Qt::RightButton)
+    {
+        getTool(HAND)->mouseMoveEvent(event);
+    }
+    else
+    {
+        currentTool()->mouseMoveEvent(event);
+    }
+}
+
+void ScribbleArea::mouseReleaseEvent(QMouseEvent *event)
+{
+    if (!areLayersSane() || !mouseInUse)
+    {
+        return;
+    }
+
+    mouseInUse = false;
+
+    m_strokeManager->mouseReleaseEvent(event);
+
+    if (adjustingTool)
+    {
+        getTool(ADJUST)->mouseReleaseEvent(event);
+        return; // [SHIFT]+drag OR [CTRL]+drag
+    }
+    else  if (event->button() == Qt::RightButton)
+    {
+        getTool(HAND)->mouseReleaseEvent(event);
+        return;
+    }
+    else
+    {
+        currentTool()->mouseReleaseEvent(event);
+    }
+
+    // ---- last check (at the very bottom of mouseRelease) ----
+    if ( instantTool && !keyboardInUse ) // temp tool and released all keys ?
+    {
+        setCurrentTool( prevToolType ); // abandon temporary tool !
+        instantTool = false;
+    }
+}
+
+void ScribbleArea::mouseDoubleClickEvent(QMouseEvent *event)
+{
+    if (!areLayersSane() || !mouseInUse)
+    {
+        return;
+    }
+
+    currentTool()->mouseDoubleClickEvent(event);
 }
 
 bool ScribbleArea::areLayersSane() const
@@ -909,106 +912,6 @@ bool ScribbleArea::isLayerPaintable() const
     return layer->type == Layer::BITMAP || layer->type == Layer::VECTOR;
 }
 
-void ScribbleArea::mouseMoveEvent(QMouseEvent *event)
-{
-    if (!areLayersSane())
-    {
-        return;
-    }
-
-    m_strokeManager->mouseMoveEvent(event);
-    currentPixel = m_strokeManager->getCurrentPixel();
-    bool invertible = true;
-    currentPoint = myTempView.inverted(&invertible).map(QPointF(currentPixel));
-
-    // the user is also pressing the mouse (dragging)
-    if (event->buttons() & Qt::LeftButton || event->buttons() & Qt::RightButton)
-    {
-        offset = currentPoint - lastPoint;
-        // --- use SHIFT + drag to resize WIDTH / use CTRL + drag to resize FEATHER ---
-        if (adjustingTool)
-        {
-            qreal incx = pow(toolOrgValue*100,0.5);
-            qreal newValue = incx + offset.x();
-            if (newValue < 0) 
-            {
-                newValue = 0;
-            }
-            newValue = pow(newValue, 2) / 100;
-
-            if (newValue < 0.2)
-            {  
-                newValue = 0.2; 
-            }
-            else if (newValue > 200)
-            { 
-                newValue = 200; 
-            }
-
-            if ( wysiToolAdjustment==wtaWIDTH )
-            {   
-                m_pEditor->applyWidth( newValue ); 
-            }
-            else if ( wysiToolAdjustment==wtaFEATHER )
-            {   
-                m_pEditor->applyFeather( newValue ); 
-            }
-            else if ( wysiToolAdjustment==wtaTRANSPARENCY )
-            {
-                //todo
-            } 
-            return;
-        }
-    }
-
-    if (event->buttons() == Qt::RightButton)
-    {
-        getTool(HAND)->mouseMoveEvent(event);
-        return;
-    }
-
-    currentTool()->mouseMoveEvent(event);
-}
-
-void ScribbleArea::mouseReleaseEvent(QMouseEvent *event)
-{
-    mouseInUse = false;
-
-    // ---- checks ------
-    if (adjustingTool)
-    {
-        return; // [SHIFT]+drag OR [CTRL]+drag
-    }
-
-    if (!areLayersSane())
-    {
-        return;
-    }
-
-    m_strokeManager->mouseReleaseEvent(event);
-
-    if (event->button() == Qt::RightButton)
-    {
-        getTool(HAND)->mouseReleaseEvent(event);
-        return;
-    }
-
-    currentTool()->mouseReleaseEvent(event);
-
-    // ---- last check (at the very bottom of mouseRelease) ----
-    if ( instantTool && !keyboardInUse ) // temp tool and released all keys ?
-    {
-        setCurrentTool( prevToolType ); // abandon temporary tool !
-        instantTool = false;
-    }
-
-}
-
-void ScribbleArea::mouseDoubleClickEvent(QMouseEvent *event)
-{
-
-    currentTool()->mouseDoubleClickEvent(event);
-}
 
 /************************************************************************************/
 // paint methods
@@ -2402,6 +2305,8 @@ void ScribbleArea::switchTool(ToolType type)
     case BRUSH:
         emit brushOn();
         break;
+    case ADJUST:
+        emit adjustOn();
     default:
         break;
     }
@@ -2497,8 +2402,8 @@ void ScribbleArea::toggleShowAllLayers()
 }
 
 
-void ScribbleArea::setPrevTool()
+void ScribbleArea::setPreviousTool()
 {
-    setCurrentTool(prevMode);
-    switchTool(prevMode);
+    setCurrentTool(prevToolType);
+    switchTool(prevToolType);
 }

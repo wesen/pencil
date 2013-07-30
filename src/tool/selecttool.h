@@ -8,7 +8,7 @@ class SelectTool : public BaseTool
 {
     Q_OBJECT
 public:
-    SelectTool();
+    SelectTool(QObject *parent = NULL);
     ToolType type();
     void loadSettings();
     QCursor cursor();

@@ -8,7 +8,7 @@ class HandTool : public BaseTool
 {
     Q_OBJECT
 public:
-    HandTool();
+    HandTool(QObject *parent = NULL);
     ToolType type();
     void loadSettings();
     QCursor cursor();

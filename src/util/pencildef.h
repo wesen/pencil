@@ -5,7 +5,8 @@
 
 enum ToolType
 {
-    PENCIL,
+    NONE = -1,
+    PENCIL = 0,
     ERASER,
     SELECT,
     MOVE,
@@ -15,7 +16,8 @@ enum ToolType
     POLYLINE,
     BUCKET,
     EYEDROPPER,
-    BRUSH
+    BRUSH,
+    ADJUST
 };
 
 

@@ -81,7 +81,8 @@ HEADERS +=  src/interfaces.h \
     src/util/blitrect.h \
     src/structure/keyframe.h \
     src/structure/camera.h \
-    src/interface/recentfilemenu.h
+    src/interface/recentfilemenu.h \
+    src/tool/adjusttool.h
 
 SOURCES +=  src/graphics/bitmap/blur.cpp \
             src/graphics/bitmap/bitmapimage.cpp \
@@ -135,7 +136,8 @@ SOURCES +=  src/graphics/bitmap/blur.cpp \
     src/util/blitrect.cpp \
     src/structure/keyframe.cpp \
     src/structure/camera.cpp \
-    src/interface/recentfilemenu.cpp
+    src/interface/recentfilemenu.cpp \
+    src/tool/adjusttool.cpp
 
 # Track dependencies for all includes
 DEPENDPATH *= $${INCLUDEPATH}

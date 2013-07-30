@@ -32,7 +32,7 @@ class Editor;
 class Layer;
 class StrokeManager;
 class BaseTool;
-
+class AdjustTool;
 
 class ScribbleArea : public QWidget
 {
@@ -107,7 +107,7 @@ public:
     void switchTool(ToolType type);
     QList<BaseTool *> getTools();
 
-    void setPrevTool();
+    void setPreviousTool();
 
     QPointF pixelToPoint(QPointF pixel);
 
@@ -134,6 +134,7 @@ signals:
     void eyedropperOn();
     void brushOn();
     void smudgeOn();
+    void adjustOn();
 
 public slots:
     void clearImage();
@@ -220,15 +221,15 @@ protected:
     void floodFillError(int errorType);
 
     MoveMode m_moveMode;
-    ToolType prevMode;
 
     StrokeManager *m_strokeManager;
     BaseTool *m_currentTool;
     QHash<ToolType, BaseTool *> m_toolSetHash;
+    AdjustTool *m_adjustTool;
 
     Editor *m_pEditor;
 
-    int tabletEraserBackupToolMode;
+    ToolType tabletEraserBackupToolMode;
     bool modified;
     bool simplified;
 
@@ -255,9 +256,6 @@ protected:
 
     bool keyboardInUse;
     bool mouseInUse;
-    QPointF lastPixel, currentPixel;
-    QPointF lastPoint, currentPoint;
-    //QBrush brush; // the current brush
 
     qreal tol;
     QList<int> closestCurves;
@@ -266,9 +264,6 @@ protected:
 
     //WYWIWYG tool adjustments
     bool adjustingTool; //whether or not resizing
-    enum myWysiToolAdjustment {wtaWIDTH, wtaFEATHER, wtaTRANSPARENCY};
-    myWysiToolAdjustment wysiToolAdjustment;
-    qreal toolOrgValue; //start resizing from previous width or feather
 
     //instant tool (temporal eg. eraser)
     bool instantTool; //whether or not using temporal tool
@@ -287,5 +282,4 @@ protected:
 };
 
 #endif
-
 
